@@ -33,6 +33,7 @@ class MainActivity : Activity() {
     private lateinit var cpsButton: TextView
     private lateinit var cpsStats: TextView
     private lateinit var durationLabel: TextView
+    private lateinit var cpsSection: LinearLayout
 
     private var mode = Mode.REFLEX
     private var waiting = false
@@ -99,38 +100,42 @@ class MainActivity : Activity() {
         root.addView(card(reactionStats))
         root.addView(space(22))
 
-        root.addView(text("CLICK SPEED", 12, red, true).apply { letterSpacing = 0.15f })
-        root.addView(space(8))
-        durationLabel = text("Duration: 5 seconds", 14, muted, false)
-        root.addView(durationLabel)
-        root.addView(space(8))
+        cpsSection = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            root.addView(text("CLICK SPEED", 12, red, true).apply { letterSpacing = 0.15f })
+            root.addView(space(8))
+            durationLabel = text("Duration: 5 seconds", 14, muted, false)
+            root.addView(durationLabel)
+            root.addView(space(8))
 
-        val durations = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        listOf(1, 5, 10, 30, 60).forEach { seconds ->
-            val b = button("${seconds}s", if (seconds == cpsDuration) red else panel) {
-                if (!cpsRunning) {
-                    cpsDuration = seconds
-                    durationLabel.text = "Duration: $cpsDuration seconds"
-                    updateCpsStats()
+            val durations = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            listOf(1, 5, 10, 30, 60).forEach { seconds ->
+                val b = button("${seconds}s", if (seconds == cpsDuration) red else panel) {
+                    if (!cpsRunning) {
+                        cpsDuration = seconds
+                        durationLabel.text = "Duration: $cpsDuration seconds"
+                        updateCpsStats()
+                    }
                 }
+                durations.addView(b, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                    marginEnd = dp(5)
+                })
             }
-            durations.addView(b, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
-                marginEnd = dp(5)
-            })
-        }
-        root.addView(durations)
-        root.addView(space(10))
+            root.addView(durations)
+            root.addView(space(10))
 
-        cpsButton = text("TAP TO START", 20, white, true).apply {
-            gravity = Gravity.CENTER
-            setPadding(dp(12), dp(26), dp(12), dp(26))
-            background = rounded(red, 18)
-            setOnClickListener { onCpsTap() }
+            cpsButton = text("TAP TO START", 20, white, true).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(12), dp(26), dp(12), dp(26))
+                background = rounded(red, 18)
+                setOnClickListener { onCpsTap() }
+            }
+            root.addView(cpsButton, LinearLayout.LayoutParams(-1, dp(142)))
+            root.addView(space(12))
+            cpsStats = text("Ready when you are", 14, muted, false)
+            root.addView(card(cpsStats))
         }
-        root.addView(cpsButton, LinearLayout.LayoutParams(-1, dp(142)))
-        root.addView(space(12))
-        cpsStats = text("Ready when you are", 14, muted, false)
-        root.addView(card(cpsStats))
+        root.addView(cpsSection)
         root.addView(space(20))
         root.addView(text("HOW IT WORKS", 12, blue, true).apply { letterSpacing = 0.15f })
         root.addView(space(6))
@@ -153,9 +158,7 @@ class MainActivity : Activity() {
         status.text = if (isReflex) "REACTION TIME  •  5 ROUNDS" else "CLICKS PER SECOND  •  $cpsDuration SECOND TEST"
         reactionButton.visibility = if (isReflex) View.VISIBLE else View.GONE
         reactionStats.visibility = if (isReflex) View.VISIBLE else View.GONE
-        durationLabel.visibility = if (isReflex) View.GONE else View.VISIBLE
-        cpsButton.visibility = if (isReflex) View.GONE else View.VISIBLE
-        cpsStats.visibility = if (isReflex) View.GONE else View.VISIBLE
+        cpsSection.visibility = if (isReflex) View.GONE else View.VISIBLE
         if (!isReflex) {
             reactionButton.text = "TAP TO START"
         }
