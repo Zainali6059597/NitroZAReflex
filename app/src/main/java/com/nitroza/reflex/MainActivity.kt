@@ -72,6 +72,10 @@ class MainActivity : Activity() {
         soundEnabled = getPreferences(MODE_PRIVATE).getBoolean("sound", true)
         vibrationEnabled = getPreferences(MODE_PRIVATE).getBoolean("vibration", true)
         targetRounds = getPreferences(MODE_PRIVATE).getInt("rounds", 5).coerceIn(3, 10)
+        delayMin = getPreferences(MODE_PRIVATE).getLong("delayMin", 1500L)
+        delayMax = getPreferences(MODE_PRIVATE).getLong("delayMax", 4500L)
+        bestCps = getPreferences(MODE_PRIVATE).getFloat("bestCps", 0f).toDouble()
+        cpsDuration = getPreferences(MODE_PRIVATE).getInt("cpsDuration", 5).coerceIn(1, 60)
         applyPalette()
         buildUi()
         showMode(Mode.REFLEX)
@@ -145,6 +149,7 @@ class MainActivity : Activity() {
             val b = button(labels[index], panel) {
                 delayMin = range.first
                 delayMax = range.second
+                getPreferences(MODE_PRIVATE).edit().putLong("delayMin", delayMin).putLong("delayMax", delayMax).apply()
                 status.text = "Random delay set: ${labels[index]}"
             }
             delayRow.addView(b, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(4) })
@@ -189,6 +194,7 @@ class MainActivity : Activity() {
                 val b = button("${seconds}s", if (seconds == cpsDuration) red else panel) {
                     if (!cpsRunning) {
                         cpsDuration = seconds
+                        getPreferences(MODE_PRIVATE).edit().putInt("cpsDuration", seconds).apply()
                         durationLabel.text = "Duration: $cpsDuration seconds"
                         updateCpsStats()
                     }
@@ -335,6 +341,7 @@ class MainActivity : Activity() {
         val elapsed = (SystemClock.elapsedRealtimeNanos() - cpsStart) / 1_000_000_000.0
         val score = cpsCount / elapsed
         bestCps = maxOf(bestCps, score)
+        getPreferences(MODE_PRIVATE).edit().putFloat("bestCps", bestCps.toFloat()).apply()
         saveHistory("CPS  •  ${String.format(Locale.US, "%.2f", score)}  •  $cpsDuration sec  •  $cpsCount taps")
         feedback(true)
         cpsRunning = false
