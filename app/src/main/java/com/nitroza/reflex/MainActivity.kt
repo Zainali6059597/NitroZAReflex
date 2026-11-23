@@ -4,10 +4,13 @@ import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.Vibrator
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -45,6 +48,9 @@ class MainActivity : Activity() {
     private lateinit var cpsStats: TextView
     private lateinit var durationLabel: TextView
     private lateinit var cpsSection: LinearLayout
+    private lateinit var historyView: TextView
+    private var soundEnabled = true
+    private var vibrationEnabled = true
 
     private var mode = Mode.REFLEX
     private var waiting = false
@@ -62,6 +68,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         themeIndex = getPreferences(MODE_PRIVATE).getInt("theme", 0).coerceIn(0, palettes.lastIndex)
+        soundEnabled = getPreferences(MODE_PRIVATE).getBoolean("sound", true)
+        vibrationEnabled = getPreferences(MODE_PRIVATE).getBoolean("vibration", true)
         applyPalette()
         buildUi()
         showMode(Mode.REFLEX)
@@ -99,6 +107,21 @@ class MainActivity : Activity() {
             themeRow.addView(swatch, LinearLayout.LayoutParams(0, dp(40), 1f).apply { marginEnd = dp(4) })
         }
         root.addView(themeRow)
+        root.addView(space(10))
+        val settingsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val soundButton = button(if (soundEnabled) "SOUND: ON" else "SOUND: OFF", panel) {
+            soundEnabled = !soundEnabled
+            getPreferences(MODE_PRIVATE).edit().putBoolean("sound", soundEnabled).apply()
+            recreate()
+        }
+        val vibrationButton = button(if (vibrationEnabled) "VIBRATION: ON" else "VIBRATION: OFF", panel) {
+            vibrationEnabled = !vibrationEnabled
+            getPreferences(MODE_PRIVATE).edit().putBoolean("vibration", vibrationEnabled).apply()
+            recreate()
+        }
+        settingsRow.addView(soundButton, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(6) })
+        settingsRow.addView(vibrationButton, LinearLayout.LayoutParams(0, dp(42), 1f))
+        root.addView(settingsRow)
         root.addView(space(18))
 
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -189,6 +212,16 @@ class MainActivity : Activity() {
             "Timing uses Android's monotonic clock. Screen refresh, touch sampling and device latency can affect results.",
             11, muted, false
         ))
+        root.addView(space(18))
+        root.addView(text("SESSION HISTORY", 12, blue, true))
+        root.addView(space(6))
+        historyView = text(loadHistory(), 13, muted, false)
+        root.addView(card(historyView))
+        root.addView(space(8))
+        root.addView(button("CLEAR HISTORY", panel) {
+            getPreferences(MODE_PRIVATE).edit().remove("history").apply()
+            historyView.text = "No saved sessions yet"
+        })
     }
 
     private fun applyPalette() {
@@ -220,17 +253,21 @@ class MainActivity : Activity() {
                 reactionButton.text = "FALSE START"
                 reactionButton.setBackgroundColor(red)
                 status.text = "Too early — wait for green"
+                feedback(false)
                 handler.postDelayed({ reactionButton.text = "TAP TO TRY AGAIN"; reactionButton.background = rounded(blue, 18) }, 900)
             }
             ready -> {
                 val elapsed = (SystemClock.elapsedRealtimeNanos() - reactionStart) / 1_000_000L
                 ready = false
                 trials.add(elapsed)
+                feedback(true)
                 if (trials.size >= 5) {
                     val sorted = trials.sorted()
                     val average = trials.average().roundToInt()
                     val median = sorted[sorted.size / 2]
                     reactionStats.text = "BEST   ${sorted.first()} ms\nAVERAGE   $average ms\nMEDIAN   $median ms\nROUNDS   5 / 5"
+                    saveHistory("REFLEX  •  Best ${sorted.first()} ms  •  Avg $average ms")
+                    feedback(true)
                     reactionButton.text = "RUN AGAIN"
                     status.text = "SESSION COMPLETE"
                 } else {
@@ -259,6 +296,7 @@ class MainActivity : Activity() {
                 reactionStart = SystemClock.elapsedRealtimeNanos()
                 reactionButton.text = "TAP NOW!"
                 reactionButton.background = rounded(Color.rgb(28, 190, 116), 18)
+                feedback(true)
             }
         }, delay)
     }
@@ -283,11 +321,40 @@ class MainActivity : Activity() {
         val elapsed = (SystemClock.elapsedRealtimeNanos() - cpsStart) / 1_000_000_000.0
         val score = cpsCount / elapsed
         bestCps = maxOf(bestCps, score)
+        saveHistory("CPS  •  ${String.format(Locale.US, "%.2f", score)}  •  $cpsDuration sec  •  $cpsCount taps")
+        feedback(true)
         cpsRunning = false
         cpsButton.text = String.format(Locale.US, "%.2f CPS  •  AGAIN", score)
         status.text = "TEST COMPLETE"
         updateCpsStats(score)
     }
+
+    private fun feedback(success: Boolean) {
+        if (soundEnabled) {
+            try {
+                val tone = ToneGenerator(AudioManager.STREAM_MUSIC, 70)
+                tone.startTone(if (success) ToneGenerator.TONE_PROP_BEEP else ToneGenerator.TONE_PROP_NACK, 85)
+                handler.postDelayed({ tone.release() }, 150)
+            } catch (_: Exception) { }
+        }
+        if (vibrationEnabled) {
+            try {
+                @Suppress("DEPRECATION")
+                (getSystemService(VIBRATOR_SERVICE) as Vibrator).vibrate(if (success) 28L else 90L)
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun saveHistory(entry: String) {
+        val prefs = getPreferences(MODE_PRIVATE)
+        val old = prefs.getString("history", "") ?: ""
+        val updated = (listOf(entry) + old.split("\n").filter { it.isNotBlank() }).take(12).joinToString("\n")
+        prefs.edit().putString("history", updated).apply()
+        if (::historyView.isInitialized) historyView.text = updated
+    }
+
+    private fun loadHistory(): String =
+        getPreferences(MODE_PRIVATE).getString("history", null) ?: "No saved sessions yet"
 
     private fun updateCpsStats(last: Double? = null) {
         val lastText = last?.let { String.format(Locale.US, "%.2f CPS", it) } ?: "—"
