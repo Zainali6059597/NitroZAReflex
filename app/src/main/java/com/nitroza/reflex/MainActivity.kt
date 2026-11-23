@@ -291,7 +291,7 @@ class MainActivity : Activity() {
                     reactionButton.text = "RUN AGAIN"
                     status.text = "SESSION COMPLETE"
                 } else {
-                    reactionStats.text = "Last: $elapsed ms     Round: ${trials.size}/5"
+                    reactionStats.text = "Last: $elapsed ms     Round: ${trials.size}/$targetRounds"
                     reactionButton.text = "$elapsed ms  •  NEXT ROUND"
                     status.text = "Good hit — keep going"
                 }
