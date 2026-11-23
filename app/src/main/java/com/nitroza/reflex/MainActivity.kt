@@ -284,7 +284,7 @@ class MainActivity : Activity() {
                 if (trials.size >= targetRounds) {
                     val sorted = trials.sorted()
                     val average = trials.average().roundToInt()
-                    val median = sorted[sorted.size / 2]
+                    val median = if (sorted.size % 2 == 0) ((sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2.0).roundToInt() else sorted[sorted.size / 2].toInt()
                     reactionStats.text = "BEST   ${sorted.first()} ms\nAVERAGE   $average ms\nMEDIAN   $median ms\nROUNDS   $targetRounds / $targetRounds"
                     saveHistory("REFLEX  •  Best ${sorted.first()} ms  •  Avg $average ms")
                     feedback(true)
@@ -329,17 +329,33 @@ class MainActivity : Activity() {
             cpsStart = SystemClock.elapsedRealtimeNanos()
             cpsButton.text = "TAP!  •  1"
             status.text = "GO! Keep tapping"
-            handler.postDelayed({ finishCps() }, cpsDuration * 1000L)
+            handler.postDelayed({ updateCpsTimer() }, 100L)
+            updateCpsTimer()
         } else {
+            if ((SystemClock.elapsedRealtimeNanos() - cpsStart) / 1_000_000_000.0 >= cpsDuration) {
+                finishCps()
+                return
+            }
             cpsCount++
             cpsButton.text = "TAP!  •  $cpsCount"
         }
     }
 
-    private fun finishCps() {
+    private fun updateCpsTimer() {
         if (!cpsRunning) return
         val elapsed = (SystemClock.elapsedRealtimeNanos() - cpsStart) / 1_000_000_000.0
-        val score = cpsCount / elapsed
+        val remaining = cpsDuration - elapsed
+        if (remaining <= 0.0) {
+            finishCps()
+        } else {
+            status.text = String.format(Locale.US, "TIME LEFT  %.1f s  •  KEEP TAPPING", remaining)
+            handler.postDelayed({ updateCpsTimer() }, 100L)
+        }
+    }
+
+    private fun finishCps() {
+        if (!cpsRunning) return
+        val score = cpsCount.toDouble() / cpsDuration.toDouble()
         bestCps = maxOf(bestCps, score)
         getPreferences(MODE_PRIVATE).edit().putFloat("bestCps", bestCps.toFloat()).apply()
         saveHistory("CPS  •  ${String.format(Locale.US, "%.2f", score)}  •  $cpsDuration sec  •  $cpsCount taps")
