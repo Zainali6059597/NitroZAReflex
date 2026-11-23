@@ -1,16 +1,19 @@
 # NitroZAReflex
 
-A lightweight, native Android app for reaction-time and clicks-per-second (CPS) testing.
+A lightweight, native Android reflex-training and click-speed app. Offline-first, with no WebView or third-party runtime dependencies.
 
 ## Current features
 
-- Reaction-time test with randomized 1.5–4.5 second wait
-- False-start detection
-- Five-round best, average and median reaction results
-- CPS tests with 1, 5, 10, 30 and 60 second durations
-- Monotonic-clock timing and an offline-first design
-- Dark Nitro-inspired interface
-- GitHub Actions APK build workflow
+- Reflex reaction test with four configurable random-delay ranges (1.5–4.5s, 2–6s, 3–7s, 5–10s)
+- False-start detection and configurable 3, 5 or 10-round sessions
+- Best, average and median reaction-time summaries
+- CPS tests with 1, 5, 10, 30 and 60-second durations
+- Six color themes: Neon, Violet, Mint, Ember, Ice and Crimson
+- Sound and vibration feedback toggles
+- Persistent session history, CPS personal best, theme and test preferences
+- Custom NitroZAReflex launcher icon
+- Android monotonic-clock timing
+- Automated GitHub Actions debug APK builds
 
 ## Build locally
 
