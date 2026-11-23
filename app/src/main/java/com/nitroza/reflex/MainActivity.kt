@@ -9,9 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -158,11 +156,6 @@ class MainActivity : Activity() {
         durationLabel.visibility = if (isReflex) View.GONE else View.VISIBLE
         cpsButton.visibility = if (isReflex) View.GONE else View.VISIBLE
         cpsStats.visibility = if (isReflex) View.GONE else View.VISIBLE
-        root.getChildAt(7).visibility = if (isReflex) View.GONE else View.VISIBLE
-        root.getChildAt(8).visibility = if (isReflex) View.GONE else View.VISIBLE
-        root.getChildAt(9).visibility = if (isReflex) View.GONE else View.VISIBLE
-        root.getChildAt(10).visibility = if (isReflex) View.GONE else View.VISIBLE
-        root.getChildAt(11).visibility = if (isReflex) View.GONE else View.VISIBLE
         if (!isReflex) {
             reactionButton.text = "TAP TO START"
         }
@@ -287,4 +280,9 @@ class MainActivity : Activity() {
     private fun spaceView(width: Int, height: Int) = View(this)
     private fun weightParams() = LinearLayout.LayoutParams(0, dp(46), 1f)
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 }
