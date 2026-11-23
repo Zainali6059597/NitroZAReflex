@@ -49,6 +49,9 @@ class MainActivity : Activity() {
     private lateinit var durationLabel: TextView
     private lateinit var cpsSection: LinearLayout
     private lateinit var historyView: TextView
+    private val delayButtons = mutableListOf<Pair<TextView, Pair<Long, Long>>>()
+    private val roundButtons = mutableListOf<Pair<TextView, Int>>()
+    private val durationButtons = mutableListOf<Pair<TextView, Int>>()
     private var soundEnabled = true
     private var vibrationEnabled = true
 
@@ -143,6 +146,7 @@ class MainActivity : Activity() {
         root.addView(status)
         root.addView(space(8))
         root.addView(text("RANDOM START DELAY", 11, muted, true))
+        delayButtons.clear()
         val delayRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         listOf(1500L to 4500L, 2000L to 6000L, 3000L to 7000L, 5000L to 10000L).forEachIndexed { index, range ->
             val labels = listOf("1.5–4.5s", "2–6s", "3–7s", "5–10s")
@@ -150,23 +154,30 @@ class MainActivity : Activity() {
                 delayMin = range.first
                 delayMax = range.second
                 getPreferences(MODE_PRIVATE).edit().putLong("delayMin", delayMin).putLong("delayMax", delayMax).apply()
+                updateDelaySelection()
                 status.text = "Random delay set: ${labels[index]}"
             }
+            delayButtons.add(b to range)
             delayRow.addView(b, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(4) })
         }
         root.addView(delayRow)
+        updateDelaySelection()
         root.addView(space(8))
         root.addView(text("REFLEX SESSION LENGTH", 11, muted, true))
+        roundButtons.clear()
         val roundsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         listOf(3, 5, 10).forEach { rounds ->
             val b = button("$rounds ROUNDS", if (rounds == targetRounds) blue else panel) {
                 targetRounds = rounds
                 getPreferences(MODE_PRIVATE).edit().putInt("rounds", rounds).apply()
+                updateRoundSelection()
                 status.text = "Session length set to $rounds rounds"
             }
+            roundButtons.add(b to rounds)
             roundsRow.addView(b, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(5) })
         }
         root.addView(roundsRow)
+        updateRoundSelection()
         root.addView(space(8))
 
         reactionButton = text("TAP TO START", 22, white, true).apply {
@@ -189,6 +200,7 @@ class MainActivity : Activity() {
             root.addView(durationLabel)
             root.addView(space(8))
 
+            durationButtons.clear()
             val durations = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
             listOf(1, 5, 10, 30, 60).forEach { seconds ->
                 val b = button("${seconds}s", if (seconds == cpsDuration) red else panel) {
@@ -196,14 +208,18 @@ class MainActivity : Activity() {
                         cpsDuration = seconds
                         getPreferences(MODE_PRIVATE).edit().putInt("cpsDuration", seconds).apply()
                         durationLabel.text = "Duration: $cpsDuration seconds"
+                        updateDurationSelection()
+                        status.text = "CPS duration set to $cpsDuration seconds"
                         updateCpsStats()
                     }
                 }
+                durationButtons.add(b to seconds)
                 durations.addView(b, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
                     marginEnd = dp(5)
                 })
             }
             root.addView(durations)
+            updateDurationSelection()
             root.addView(space(10))
 
             cpsButton = text("TAP TO START", 20, white, true).apply {
@@ -242,6 +258,24 @@ class MainActivity : Activity() {
             getPreferences(MODE_PRIVATE).edit().remove("history").apply()
             historyView.text = "No saved sessions yet"
         })
+    }
+
+    private fun updateDelaySelection() {
+        delayButtons.forEach { (button, range) ->
+            button.background = rounded(if (range.first == delayMin && range.second == delayMax) blue else panel, 12)
+        }
+    }
+
+    private fun updateRoundSelection() {
+        roundButtons.forEach { (button, rounds) ->
+            button.background = rounded(if (rounds == targetRounds) blue else panel, 12)
+        }
+    }
+
+    private fun updateDurationSelection() {
+        durationButtons.forEach { (button, seconds) ->
+            button.background = rounded(if (seconds == cpsDuration) red else panel, 12)
+        }
     }
 
     private fun applyPalette() {
