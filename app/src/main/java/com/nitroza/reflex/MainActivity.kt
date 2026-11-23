@@ -79,7 +79,7 @@ class MainActivity : Activity() {
         val reflexTab = button("REFLEX", blue) { showMode(Mode.REFLEX) }
         val cpsTab = button("CPS TEST", red) { showMode(Mode.CPS) }
         tabs.addView(reflexTab, weightParams())
-        tabs.addView(spaceView(10), LinearLayout.LayoutParams(dp(10), 1))
+        tabs.addView(spaceView(10, 1), LinearLayout.LayoutParams(dp(10), 1))
         tabs.addView(cpsTab, weightParams())
         root.addView(tabs)
         root.addView(space(18))
@@ -108,7 +108,7 @@ class MainActivity : Activity() {
             root.addView(durationLabel)
             root.addView(space(8))
 
-            val durations = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val durations = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.HORIZONTAL }
             listOf(1, 5, 10, 30, 60).forEach { seconds ->
                 val b = button("${seconds}s", if (seconds == cpsDuration) red else panel) {
                     if (!cpsRunning) {
@@ -160,6 +160,8 @@ class MainActivity : Activity() {
         reactionStats.visibility = if (isReflex) View.VISIBLE else View.GONE
         cpsSection.visibility = if (isReflex) View.GONE else View.VISIBLE
         if (!isReflex) {
+            waiting = false
+            ready = false
             reactionButton.text = "TAP TO START"
         }
     }
@@ -280,7 +282,9 @@ class MainActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
 
-    private fun spaceView(width: Int, height: Int) = View(this)
+    private fun spaceView(width: Int, height: Int) = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(width), dp(height))
+    }
     private fun weightParams() = LinearLayout.LayoutParams(0, dp(46), 1f)
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
 
