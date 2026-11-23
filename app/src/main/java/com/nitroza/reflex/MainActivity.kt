@@ -18,10 +18,21 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 class MainActivity : Activity() {
-    private val bg = Color.rgb(8, 12, 22)
-    private val panel = Color.rgb(17, 25, 42)
-    private val blue = Color.rgb(35, 145, 255)
-    private val red = Color.rgb(255, 65, 82)
+    private var bg = Color.rgb(8, 12, 22)
+    private var panel = Color.rgb(17, 25, 42)
+    private var blue = Color.rgb(35, 145, 255)
+    private var red = Color.rgb(255, 65, 82)
+    private var themeIndex = 0
+    private var delayMin = 1500L
+    private var delayMax = 4500L
+    private val palettes = listOf(
+        intArrayOf(Color.rgb(8,12,22), Color.rgb(17,25,42), Color.rgb(35,145,255), Color.rgb(255,65,82)),
+        intArrayOf(Color.rgb(12,10,24), Color.rgb(31,22,48), Color.rgb(164,104,255), Color.rgb(255,75,150)),
+        intArrayOf(Color.rgb(7,20,19), Color.rgb(15,42,38), Color.rgb(35,205,150), Color.rgb(255,170,55)),
+        intArrayOf(Color.rgb(22,13,9), Color.rgb(48,27,18), Color.rgb(255,155,55), Color.rgb(255,75,55)),
+        intArrayOf(Color.rgb(12,15,18), Color.rgb(29,35,42), Color.rgb(180,205,220), Color.rgb(80,190,255)),
+        intArrayOf(Color.rgb(20,9,14), Color.rgb(48,18,29), Color.rgb(255,70,110), Color.rgb(255,190,65))
+    )
     private val muted = Color.rgb(151, 166, 190)
     private val white = Color.WHITE
     private val handler = Handler(Looper.getMainLooper())
@@ -50,6 +61,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        themeIndex = getPreferences(MODE_PRIVATE).getInt("theme", 0).coerceIn(0, palettes.lastIndex)
+        applyPalette()
         buildUi()
         showMode(Mode.REFLEX)
     }
@@ -73,7 +86,20 @@ class MainActivity : Activity() {
             setPadding(0, dp(2), 0, dp(4))
         })
         root.addView(text("Train your timing. Track your speed.", 14, muted, false))
-        root.addView(space(22))
+        root.addView(space(12))
+        root.addView(text("PERSONALIZE YOUR LOOK", 11, muted, true))
+        val themeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val themeNames = listOf("NEON", "VIOLET", "MINT", "EMBER", "ICE", "CRIMSON")
+        themeNames.forEachIndexed { index, name ->
+            val swatch = button(name, palettes[index][2]) {
+                themeIndex = index
+                getPreferences(MODE_PRIVATE).edit().putInt("theme", index).apply()
+                recreate()
+            }
+            themeRow.addView(swatch, LinearLayout.LayoutParams(0, dp(40), 1f).apply { marginEnd = dp(4) })
+        }
+        root.addView(themeRow)
+        root.addView(space(18))
 
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val reflexTab = button("REFLEX", blue) { showMode(Mode.REFLEX) }
@@ -86,6 +112,19 @@ class MainActivity : Activity() {
 
         status = text("", 14, muted, false)
         root.addView(status)
+        root.addView(space(8))
+        root.addView(text("RANDOM START DELAY", 11, muted, true))
+        val delayRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf(1500L to 4500L, 2000L to 6000L, 3000L to 7000L, 5000L to 10000L).forEachIndexed { index, range ->
+            val labels = listOf("1.5–4.5s", "2–6s", "3–7s", "5–10s")
+            val b = button(labels[index], panel) {
+                delayMin = range.first
+                delayMax = range.second
+                status.text = "Random delay set: ${labels[index]}"
+            }
+            delayRow.addView(b, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(4) })
+        }
+        root.addView(delayRow)
         root.addView(space(8))
 
         reactionButton = text("TAP TO START", 22, white, true).apply {
@@ -152,6 +191,11 @@ class MainActivity : Activity() {
         ))
     }
 
+    private fun applyPalette() {
+        val p = palettes[themeIndex]
+        bg = p[0]; panel = p[1]; blue = p[2]; red = p[3]
+    }
+
     private fun showMode(newMode: Mode) {
         mode = newMode
         val isReflex = mode == Mode.REFLEX
@@ -207,7 +251,7 @@ class MainActivity : Activity() {
         reactionButton.text = "WAIT FOR GREEN..."
         reactionButton.background = rounded(red, 18)
         status.text = "Stay ready — don't tap early"
-        val delay = Random.nextLong(1500L, 4501L)
+        val delay = Random.nextLong(delayMin, delayMax + 1L)
         handler.postDelayed({
             if (waiting && mode == Mode.REFLEX) {
                 waiting = false
