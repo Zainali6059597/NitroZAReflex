@@ -60,6 +60,7 @@ class MainActivity : Activity() {
     private var cpsRunning = false
     private var cpsStart = 0L
     private var cpsDuration = 5
+    private var targetRounds = 5
     private var cpsCount = 0
     private var bestCps = 0.0
 
@@ -70,6 +71,7 @@ class MainActivity : Activity() {
         themeIndex = getPreferences(MODE_PRIVATE).getInt("theme", 0).coerceIn(0, palettes.lastIndex)
         soundEnabled = getPreferences(MODE_PRIVATE).getBoolean("sound", true)
         vibrationEnabled = getPreferences(MODE_PRIVATE).getBoolean("vibration", true)
+        targetRounds = getPreferences(MODE_PRIVATE).getInt("rounds", 5).coerceIn(3, 10)
         applyPalette()
         buildUi()
         showMode(Mode.REFLEX)
@@ -149,6 +151,18 @@ class MainActivity : Activity() {
         }
         root.addView(delayRow)
         root.addView(space(8))
+        root.addView(text("REFLEX SESSION LENGTH", 11, muted, true))
+        val roundsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        listOf(3, 5, 10).forEach { rounds ->
+            val b = button("$rounds ROUNDS", if (rounds == targetRounds) blue else panel) {
+                targetRounds = rounds
+                getPreferences(MODE_PRIVATE).edit().putInt("rounds", rounds).apply()
+                status.text = "Session length set to $rounds rounds"
+            }
+            roundsRow.addView(b, LinearLayout.LayoutParams(0, dp(42), 1f).apply { marginEnd = dp(5) })
+        }
+        root.addView(roundsRow)
+        root.addView(space(8))
 
         reactionButton = text("TAP TO START", 22, white, true).apply {
             gravity = Gravity.CENTER
@@ -203,7 +217,7 @@ class MainActivity : Activity() {
         root.addView(space(6))
         root.addView(text(
             "Reflex: wait for the panel to turn green, then tap as quickly as you can. " +
-                "Early taps are false starts and won't count. Complete five rounds for your stats.\n\n" +
+                "Early taps are false starts and won't count. Choose 3, 5 or 10 rounds for a session summary.\n\n" +
                 "CPS: tap as many times as possible before the timer ends. Choose a test duration above.",
             13, muted, false
         ))
@@ -232,7 +246,7 @@ class MainActivity : Activity() {
     private fun showMode(newMode: Mode) {
         mode = newMode
         val isReflex = mode == Mode.REFLEX
-        status.text = if (isReflex) "REACTION TIME  •  5 ROUNDS" else "CLICKS PER SECOND  •  $cpsDuration SECOND TEST"
+        status.text = if (isReflex) "REACTION TIME  •  $targetRounds ROUNDS" else "CLICKS PER SECOND  •  $cpsDuration SECOND TEST"
         reactionButton.visibility = if (isReflex) View.VISIBLE else View.GONE
         reactionStats.visibility = if (isReflex) View.VISIBLE else View.GONE
         cpsSection.visibility = if (isReflex) View.GONE else View.VISIBLE
@@ -261,11 +275,11 @@ class MainActivity : Activity() {
                 ready = false
                 trials.add(elapsed)
                 feedback(true)
-                if (trials.size >= 5) {
+                if (trials.size >= targetRounds) {
                     val sorted = trials.sorted()
                     val average = trials.average().roundToInt()
                     val median = sorted[sorted.size / 2]
-                    reactionStats.text = "BEST   ${sorted.first()} ms\nAVERAGE   $average ms\nMEDIAN   $median ms\nROUNDS   5 / 5"
+                    reactionStats.text = "BEST   ${sorted.first()} ms\nAVERAGE   $average ms\nMEDIAN   $median ms\nROUNDS   $targetRounds / $targetRounds"
                     saveHistory("REFLEX  •  Best ${sorted.first()} ms  •  Avg $average ms")
                     feedback(true)
                     reactionButton.text = "RUN AGAIN"
@@ -282,7 +296,7 @@ class MainActivity : Activity() {
     }
 
     private fun startReactionRound() {
-        if (trials.size >= 5) trials.clear()
+        if (trials.size >= targetRounds) trials.clear()
         waiting = true
         ready = false
         reactionButton.text = "WAIT FOR GREEN..."
